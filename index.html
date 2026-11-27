@@ -53,17 +53,15 @@
 
     <!-- APP CONTAINER -->
     <div id="app" class="w-full h-full relative">
-        <!-- Tombol akses guru global: tetap tersedia saat sesi siswa dipulihkan -->
-        <button id="global-teacher-btn" type="button" onclick="showTeacherPanelLogin()"
-            class="fixed top-4 right-4 z-[70] bg-slate-800/90 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm shadow-lg backdrop-blur transition">
-            <i class="fas fa-lock mr-2"></i>Panel Guru
-        </button>
 
         <!-- ========================================== -->
         <!-- 1. HALAMAN LOGIN -->
         <!-- ========================================== -->
         <div id="login-view" class="absolute inset-0 bg-gradient-to-br from-teal-800 to-emerald-900 flex flex-col items-center justify-center p-4 z-50 overflow-y-auto">
             
+            <button onclick="showTeacherPanelLogin()" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm backdrop-blur transition">
+                <i class="fas fa-lock mr-2"></i>Panel Guru
+            </button>
 
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border-t-8 border-gold-500" style="border-top-color: #eab308;">
                 
@@ -1923,12 +1921,6 @@
         // 10. PANEL GURU / PENGAWAS
         // ==========================================
         function showTeacherPanelLogin() {
-            // Fallback prompt menjaga akses guru tetap dapat dibuka jika CDN SweetAlert gagal dimuat.
-            if (!window.Swal || typeof window.Swal.fire !== 'function') {
-                const pin = window.prompt('Masukkan PIN Panel Guru');
-                if (pin) { teacherKey = pin.trim(); openTeacherPanel(); }
-                return;
-            }
             Swal.fire({
                 title: 'Akses Panel Guru',
                 input: 'password',
@@ -1937,54 +1929,28 @@
                 confirmButtonText: 'Masuk',
                 confirmButtonColor: '#0f766e',
                 preConfirm: (pin) => {
-                    if (!pin || !pin.trim()) {
-                        Swal.showValidationMessage('Masukkan kunci guru.');
-                        return false;
-                    }
-                    return pin.trim();
+                    if (!pin) { Swal.showValidationMessage('Masukkan kunci guru.'); }
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
                     teacherKey = result.value;
                     openTeacherPanel();
                 }
-            }).catch((error) => {
-                console.error('Dialog Panel Guru gagal:', error);
-                const pin = window.prompt('Masukkan PIN Panel Guru');
-                if (pin) { teacherKey = pin.trim(); openTeacherPanel(); }
             });
         }
 
         function openTeacherPanel() {
-            const panel = document.getElementById('teacher-view');
-            if (!panel) {
-                window.alert('Panel Guru tidak ditemukan pada HTML. Periksa versi index.html yang dipublikasikan.');
-                return;
-            }
-            panel.classList.remove('hidden');
-            const accessButton = document.getElementById('global-teacher-btn');
-            if (accessButton) accessButton.classList.add('hidden');
-            const cfg = document.getElementById('cfg-webhook');
-            if (cfg) cfg.value = WEBHOOK_URL;
+            document.getElementById('teacher-view').classList.remove('hidden');
+            document.getElementById('cfg-webhook').value = WEBHOOK_URL;
             acadTab('overview');
-            const status = document.getElementById('syncStatus');
-            if (!window.google?.script?.run) {
-                status.textContent = 'Panel terbuka, tetapi halaman ini bukan Apps Script Web App. Pengambilan data memerlukan koneksi backend yang sesuai.';
-            }
             renderTeacherTable();
-            clearInterval(syncTimer);
-            syncTimer = setInterval(() => {
-                const auto = document.getElementById('autoSync');
-                if (auto?.checked) renderTeacherTable();
-            }, 30000);
+            clearInterval(syncTimer); syncTimer=setInterval(()=>{if(document.getElementById("autoSync").checked)renderTeacherTable();},30000);
         }
 
         function closeTeacherPanel() {
             clearInterval(syncTimer); teacherKey = ''; teacherKeys={}; teacherResults = []; teacherRequest++; analysisRows=[]; matrixRows=[]; ['gradeTable','analysisTable','answerTable','stats','syncStatus','scoreChart','difficultyChart','remedialTable'].forEach(id=>document.getElementById(id).textContent='');
             
             document.getElementById('teacher-view').classList.add('hidden');
-            const accessButton = document.getElementById('global-teacher-btn');
-            if (accessButton) accessButton.classList.remove('hidden');
         }
 
 let syncTimer, busy=false, analysisRows=[], matrixRows=[];
