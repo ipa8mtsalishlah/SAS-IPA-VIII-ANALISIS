@@ -346,7 +346,7 @@
         let teacherResults = [];
         let teacherRequest = 0;
         const DURASI_MENIT = 120;
-        let WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz8qcXBuKi-3KwxAbnfR67IvgTKbFeSdaLtQzLHGWKmKK-chX1OQXK51pAbVyYSp16tJw/exec";
+        let WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwl5PEgn9PksykS37h3PZ_ax5GtDY6HiHvrzhsEagWqjegBVYAfHBZsVsUr-3YEemxv/exec";
 
         // DATA LENGKAP 103 PESERTA SESUAI FILE PDF KELAS VIII CBT_2.pdf
         const DEFAULT_STUDENTS = [];
@@ -1954,7 +1954,19 @@
         }
 
 let syncTimer, busy=false, analysisRows=[], matrixRows=[];
-function rpc(data){return new Promise((resolve,reject)=>{if(!window.google?.script?.run){reject(Error('Buka aplikasi melalui Web App Apps Script'));return;}const timer=setTimeout(()=>reject(Error('Server belum merespons (45 detik)')),45000);google.script.run.withSuccessHandler(r=>{clearTimeout(timer);if(r.status==='success')resolve(r);else reject(Error(r.message||'Server menolak permintaan'));}).withFailureHandler(e=>{clearTimeout(timer);reject(Error(e.message||'Gagal menghubungi server'));}).dispatch(data);});}
+function rpc(data){return new Promise((resolve,reject)=>{
+    // Panel Guru dan pengiriman nilai hanya berjalan dari HTML Service Apps Script.
+    // GitHub menyimpan sumber kode; GitHub Pages bukan host operasional CBT.
+    if(!window.google?.script?.run){
+        reject(Error('Aplikasi dibuka di luar Google Apps Script. Buka URL Web App CBT, bukan file GitHub Pages atau file lokal.'));
+        return;
+    }
+    const timer=setTimeout(()=>reject(Error('Server belum merespons dalam 45 detik. Periksa koneksi dan deployment Apps Script.')),45000);
+    google.script.run
+      .withSuccessHandler(r=>{clearTimeout(timer);if(r&&r.status==='success')resolve(r);else reject(Error(r?.message||'Server menolak permintaan'));})
+      .withFailureHandler(e=>{clearTimeout(timer);reject(Error(e?.message||'Gagal menghubungi server Apps Script'));})
+      .dispatch(data);
+});}
 function apiTeacher(action,extra={}){return rpc({action,key:teacherKey,...extra});}
 function acadTab(tab,btn){document.querySelectorAll('#teacherReport [data-tab]').forEach(e=>e.hidden=e.dataset.tab!==tab);document.querySelectorAll('#acadNav button').forEach(e=>e.classList.toggle('active',e===btn));document.getElementById('acadTitle').textContent=btn?btn.textContent.trim():'Dashboard Guru';}
 function filterGrades(q){document.querySelectorAll('#gradeTable tbody tr').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(q.toLowerCase()));}

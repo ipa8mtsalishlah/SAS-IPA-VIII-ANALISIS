@@ -21,3 +21,39 @@ if(d.action==='rekapGuru'){const jm=new Map(rows_(j).map(a=>[id_(a[0],a[1]),a.sl
 if(d.action==='koreksi'){if(!Array.isArray(d.marks)||d.marks.length!==5||d.marks.some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>4))throw Error('Skor harus 0–4');const row=locate_(r,d.nama,d.kelas);if(row>r.getLastRow())throw Error('Peserta tidak ditemukan');const obj=r.getRange(row,3).getValue();if(obj===''||!Number.isFinite(Number(obj)))throw Error('Nilai objektif tidak valid');const sum=d.marks.reduce((a,b)=>a+b,0),final=Math.round((Number(obj)*.8+sum)*100)/100;c.getRange(locate_(c,d.nama,d.kelas),1,1,7).setValues([[safe_(d.nama),safe_(d.kelas),...d.marks]]);r.getRange(row,9,1,3).setValues([[sum,final,final>=76?'Tuntas':'Remedial']]);return json_({status:'success'});}
 if(d.action)throw Error('Aksi tidak dikenal');if(!d.nama||!d.kelas||!d.answers||typeof d.answers!=='object')throw Error('Data tidak lengkap');const row=locate_(r,d.nama,d.kelas);if(row<=r.getLastRow())return json_({status:'success',skor:r.getRange(row,3).getValue(),message:'Hasil lama dipertahankan'});const score=objective_(d.answers);j.getRange(locate_(j,d.nama,d.kelas),1,1,27).setValues([[safe_(d.nama),safe_(d.kelas),...Array.from({length:25},(_,i)=>{const v=d.answers[i+1];return safe_(v==null?'':typeof v==='object'?JSON.stringify(v):String(v));})]]);r.getRange(row,1,1,11).setValues([[safe_(d.nama),safe_(d.kelas),score,grade_(score),d.terjawab||0,d.kosong||0,safe_(typeof d.pelanggaran==='object'?JSON.stringify(d.pelanggaran):d.pelanggaran||0),safe_(d.waktu||new Date().toISOString()),'','','Terkirim']]);return json_({status:'success',skor:score});
 }catch(err){return json_({status:'error',message:err.message});}finally{if(lock.hasLock()){SpreadsheetApp.flush();lock.releaseLock();}}}
+
+
+/**
+ * DIAGNOSTIK CBT (READ-ONLY)
+ * Jalankan manual dari editor Apps Script untuk memeriksa konfigurasi.
+ * Fungsi ini tidak mengubah spreadsheet maupun Script Properties.
+ */
+function diagnostikCBT(){
+  const p=PropertiesService.getScriptProperties();
+  const ssId=p.getProperty('SS_ID');
+  const tokenSet=!!p.getProperty('EXAM_TOKEN');
+  const guruKeySet=!!p.getProperty('GURU_KEY');
+  const out={
+    spreadsheetIdTersimpan:!!ssId,
+    tokenUjianTersedia:tokenSet,
+    kunciGuruTersedia:guruKeySet,
+    jumlahPesertaRoster:ROSTER.length,
+    jumlahKunciObjektif:Object.keys(KEYS).length,
+    sheets:{},
+    catatan:[]
+  };
+  if(!ssId){out.catatan.push('SS_ID belum diatur. Jalankan setup() dari spreadsheet CBT yang benar setelah memastikan spreadsheet aktif.');}
+  else{
+    try{
+      const ss=SpreadsheetApp.openById(ssId);
+      [NAMA_SHEET,NAMA_JAWABAN,'KOREKSI_URAIAN'].forEach(n=>{
+        const sh=ss.getSheetByName(n);
+        out.sheets[n]=sh?{tersedia:true,jumlahBarisData:Math.max(0,sh.getLastRow()-1)}:{tersedia:false};
+      });
+    }catch(err){out.catatan.push('Spreadsheet tidak dapat dibuka: '+err.message);}
+  }
+  if(!tokenSet)out.catatan.push('EXAM_TOKEN belum diatur di Script Properties.');
+  if(!guruKeySet)out.catatan.push('GURU_KEY belum diatur di Script Properties.');
+  Logger.log(JSON.stringify(out,null,2));
+  return out;
+}
